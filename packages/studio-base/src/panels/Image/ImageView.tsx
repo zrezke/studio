@@ -20,6 +20,7 @@ import { useUpdateEffect } from "react-use";
 import { DeepPartial } from "ts-essentials";
 import { makeStyles } from "tss-react/mui";
 
+import Log from "@foxglove/log";
 import { PanelExtensionContext, SettingsTreeAction, Topic } from "@foxglove/studio";
 import {
   PanelContextMenu,
@@ -42,6 +43,7 @@ import { getRelatedMarkerTopics, getMarkerOptions, getCameraInfoTopic } from "./
 import { buildSettingsTree } from "./settings";
 import type { Config, PixelData, RawMarkerData } from "./types";
 
+const log = Log.getLogger(__filename);
 type Props = {
   context: PanelExtensionContext;
 };
@@ -255,7 +257,6 @@ export function ImageView({ context }: Props): JSX.Element {
   ]);
 
   const lastImageMessageRef = useRef(image);
-
   useEffect(() => {
     if (image) {
       lastImageMessageRef.current = image;

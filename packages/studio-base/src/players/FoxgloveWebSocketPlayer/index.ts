@@ -35,11 +35,12 @@ import {
   Channel,
   ChannelId,
   ClientChannel,
-  FoxgloveClient,
   ServerCapability,
+  // FoxgloveClient,
   SubscriptionId,
 } from "@foxglove/ws-protocol";
 
+import FoxgloveClient from "./FoxgloveClient";
 import WorkerSocketAdapter from "./WorkerSocketAdapter";
 
 const log = Log.getLogger(__dirname);
@@ -69,7 +70,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
   private _closed: boolean = false; // Whether the player has been completely closed using close().
   private _topics?: Topic[]; // Topics as published by the WebSocket.
   private _topicsStats = new Map<string, TopicStats>(); // Topic names to topic statistics.
-  private _datatypes?: RosDatatypes; // Datatypes as published by the WebSocket.
+  private _datatypes?: RosDatatypes = new Map(); // Datatypes as published by the WebSocket.
   private _parsedMessages: MessageEvent<unknown>[] = []; // Queue of messages that we'll send in next _emitState() call.
   private _receivedBytes: number = 0;
   private _metricsCollector: PlayerMetricsCollectorInterface;
@@ -127,14 +128,14 @@ export default class FoxgloveWebSocketPlayer implements Player {
     }
     log.info(`Opening connection to ${this._url}`);
 
-    this._client = new FoxgloveClient({
-      ws:
-        typeof Worker !== "undefined"
-          ? new WorkerSocketAdapter(this._url, [FoxgloveClient.SUPPORTED_SUBPROTOCOL])
-          : new WebSocket(this._url, [FoxgloveClient.SUPPORTED_SUBPROTOCOL]),
+    this._client = new FoxgloveClient();
+
+    this._client.on("lmao", () => {
+      log.info("LMAO event");
     });
 
     this._client.on("open", () => {
+      log.info("Open event");
       if (this._closed) {
         return;
       }
@@ -159,7 +160,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
       this._serverCapabilities = [];
       this._playerCapabilities = [];
       this._supportedEncodings = undefined;
-      this._datatypes = undefined;
+      this._datatypes = new Map();
 
       for (const topic of this._resolvedSubscriptionsByTopic.keys()) {
         this._unresolvedSubscriptions.add(topic);
@@ -367,6 +368,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
         }
         stats.numMessages++;
       } catch (error) {
+        log.info("EXCEPTION IN MESSAGE HANDLER");
         this._problems.addProblem(`message:${chanInfo.channel.topic}`, {
           severity: "error",
           message: `Failed to parse message on ${chanInfo.channel.topic}`,
@@ -636,7 +638,6 @@ export default class FoxgloveWebSocketPlayer implements Player {
     if (!this._client || this._closed) {
       return;
     }
-
     if (this._unresolvedPublications.length === 0) {
       return;
     }

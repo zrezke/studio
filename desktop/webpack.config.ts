@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { CleanWebpackPlugin } from "clean-webpack-plugin";
+// import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import path from "path";
 import type { Configuration } from "webpack";
@@ -69,6 +70,9 @@ const devServerConfig: Configuration = {
         author: packageJson.author,
       }),
     }),
+    // new CopyWebpackPlugin({
+    //   patterns: [{ from: "main/child.js", to: "main/child.js" }],
+    // }),
   ],
 };
 

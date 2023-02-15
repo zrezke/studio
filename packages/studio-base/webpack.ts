@@ -84,6 +84,7 @@ export function makeConfig(
         // punycode is a dependency for some older webpack v4 browser libs
         // It adds unecessary bloat to the build so we make sure it isn't included
         punycode: false,
+        net: false,
       },
     },
     module: {

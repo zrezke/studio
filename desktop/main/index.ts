@@ -3,8 +3,18 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import * as Sentry from "@sentry/electron/main";
-import { app, BrowserWindow, ipcMain, Menu, session, nativeTheme } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  session,
+  nativeTheme,
+  utilityProcess,
+  MessageChannelMain,
+} from "electron";
 import fs from "fs";
+import { join as pathJoin } from "path";
 
 import Logger from "@foxglove/log";
 import { AppSetting } from "@foxglove/studio-base/src/AppSetting";
@@ -209,6 +219,10 @@ function main() {
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.on("ready", async () => {
+    ipcMain.on("RECONECT_SOCKET", (event) => {
+      event.sender.send("lmao");
+      log.error("RECONECT_SOCKET event");
+    });
     updateNativeColorScheme();
     const argv = process.argv;
     const deepLinks = argv.filter((arg) => arg.startsWith("foxglove://"));

@@ -12,8 +12,13 @@ import {
   shell,
   MenuItem,
   systemPreferences,
+  ipcMain,
+  utilityProcess,
+  MessageChannelMain,
 } from "electron";
+import * as net from "net";
 import path from "path";
+import { join as pathJoin } from "path";
 
 import Logger from "@foxglove/log";
 import { AppSetting } from "@foxglove/studio-base/src/AppSetting";
@@ -130,7 +135,7 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
       contextIsolation: true,
       sandbox: false, // Allow preload script to access Node builtins
       preload: preloadPath,
-      nodeIntegration: false,
+      nodeIntegration: true,
       additionalArguments: [
         `--allowCrashReporting=${crashReportingEnabled ? "1" : "0"}`,
         `--allowTelemetry=${telemetryEnabled ? "1" : "0"}`,
@@ -151,6 +156,85 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
   }
 
   const browserWindow = new BrowserWindow(windowOptions);
+  ipcMain.on("fork", (e, msg) => {
+    log.info("FORKING");
+    const server = net.createServer((socket) => {
+      socket.setNoDelay(true);
+      let received: Buffer[] = [];
+      let nBytes = 0;
+      let nReceived = 0;
+      socket.on("data", (data: Buffer) => {
+        if (nBytes === 0) {
+          // log.info("Length: ", data.byteLength);
+          nBytes = data.readUInt32BE();
+          // assume the image is bigger than 65k
+          nReceived += data.byteLength - 4;
+          // log.info("N Bytes: ", nBytes, " N Received: ", nReceived);
+          received.push(data.slice(4));
+          if (nReceived >= nBytes) {
+            browserWindow.webContents.send("fromMain", Buffer.concat(received));
+            received = [];
+            nReceived = 0;
+            nBytes = 0;
+          }
+          return;
+        }
+        received.push(data);
+        nReceived += data.byteLength;
+        // log.info("N ALL: ", nReceived, " N BYTES: ", nBytes);
+        if (nReceived >= nBytes) {
+          // log.info("Sending");
+          browserWindow.webContents.send("fromMain", Buffer.concat(received));
+          received = [];
+          nReceived = 0;
+          nBytes = 0;
+        }
+        // browserWindow.webContents.send("fromMain", data);
+      });
+      socket.on("end", () => {
+        log.info(
+          "Received end: ",
+          received.length,
+          " Combined: ",
+          received.map((b) => b.length).reduce((a, b) => a + b, 0),
+        );
+        // browserWindow.webContents.send("fromMain", Buffer.concat(received));
+        received = [];
+      });
+      ipcMain.on("toMain", (e, msg: object) => {
+        log.info("Received main: ", msg);
+        const encodedMessage: Uint8Array = new TextEncoder().encode(JSON.stringify(msg));
+        const bytesInMessage = new Uint8Array(4);
+        const byteLength = encodedMessage.byteLength;
+        bytesInMessage[0] = (byteLength >> 24) & 0xff;
+        bytesInMessage[1] = (byteLength >> 16) & 0xff;
+        bytesInMessage[2] = (byteLength >> 8) & 0xff;
+        bytesInMessage[3] = byteLength & 0xff;
+        socket.write(bytesInMessage);
+        socket.write(encodedMessage);
+      });
+    });
+    server.listen(9999, () => {
+      log.info("SERVER LISTENING ON PORT 9999");
+    });
+    // const { port1, port2 } = new MessageChannelMain();
+    log.info("Dirname; ", __dirname);
+    log.info("Corrected path: ", pathJoin(__dirname, "../../main/", "child.js"));
+    const { port1, port2 } = new MessageChannelMain();
+    const child = utilityProcess.fork(pathJoin(__dirname, "../../main/", "child.js"), ["hello"], {
+      stdio: "pipe",
+    });
+    child.postMessage({ message: "hello" }, [port1]);
+    port1.on("message", (message) => {
+      log.info("Message from child: ", message);
+    });
+    child.stdout?.on("data", (data: string) => {
+      log.info("Child stdout: ", data);
+    });
+    child.on("message", (message) => {
+      log.info("Message from child: but directly", message);
+    });
+  });
 
   // Forward full screen events to the renderer
   browserWindow.addListener("enter-full-screen", () =>

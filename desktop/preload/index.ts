@@ -5,6 +5,7 @@
 import "@sentry/electron/preload";
 import * as Sentry from "@sentry/electron/renderer";
 import { contextBridge, ipcRenderer } from "electron";
+import * as net from "net";
 import os from "os";
 import { join as pathJoin } from "path";
 
@@ -33,6 +34,8 @@ log.info(`initializing preloader, argv="${window.process.argv.join(" ")}"`);
 window.onerror = (ev) => {
   console.error(ev);
 };
+
+// window.require = require;
 
 // Load opt-out settings for crash reporting and telemetry
 const [allowCrashReporting] = getTelemetrySettings();
@@ -220,6 +223,49 @@ contextBridge.exposeInMainWorld("menuBridge", menuBridge);
 contextBridge.exposeInMainWorld("storageBridge", storageBridge);
 contextBridge.exposeInMainWorld("allowCrashReporting", allowCrashReporting);
 contextBridge.exposeInMainWorld("desktopBridge", desktopBridge);
+contextBridge.exposeInMainWorld("ipcRendererBridge", ipcRenderer);
+
+// contextBridge.exposeInMainWorld("netbridge", net);
+
+interface ISocketData {
+  subscribers: Array<{ callback: (data: Buffer) => void }>;
+}
+const socketData: ISocketData = {
+  subscribers: [],
+};
+
+contextBridge.exposeInMainWorld("socketData", socketData);
+
+// const server = net.createServer((socket) => {
+//   socket.setNoDelay(true);
+//   socket.on("data", (data) => {
+//     for (const subscriber of socketData.subscribers) {
+//       subscriber.callback(data);
+//     }
+//     log.info("RCV");
+//   });
+// });
+// server.listen(9999, () => {
+//   log.info("SERVER LISTENING ON PORT 9999");
+// });
+// contextBridge.exposeInMainWorld("server", server);
+
+contextBridge.exposeInMainWorld("api", {
+  send: (channel: string, data: Buffer) => {
+    // whitelist channels
+    const validChannels = ["toMain"];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.send(channel, data);
+    }
+  },
+  receive: (channel: string, func: any) => {
+    const validChannels = ["fromMain"];
+    if (validChannels.includes(channel)) {
+      // Deliberately strip event as it includes `sender`
+      ipcRenderer.on(channel, (event, ...args) => func(...args));
+    }
+  },
+});
 
 // Load telemetry opt-out settings from window.process.argv
 function getTelemetrySettings(): [crashReportingEnabled: boolean] {
