@@ -158,7 +158,7 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
   const browserWindow = new BrowserWindow(windowOptions);
   ipcMain.on("fork", (e, msg) => {
     log.info("FORKING");
-    const server = net.createServer((socket) => {
+    /*     const server = net.createServer((socket) => {
       socket.setNoDelay(true);
       let received: Buffer[] = [];
       let nBytes = 0;
@@ -210,29 +210,31 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
         bytesInMessage[1] = (byteLength >> 16) & 0xff;
         bytesInMessage[2] = (byteLength >> 8) & 0xff;
         bytesInMessage[3] = byteLength & 0xff;
-        socket.write(bytesInMessage);
-        socket.write(encodedMessage);
+        socket.write(Buffer.concat([bytesInMessage, encodedMessage]));
+        //socket.write(encodedMessage);
       });
-    });
-    server.listen(9999, () => {
+    }); */
+    /*     server.listen(9999, () => {
       log.info("SERVER LISTENING ON PORT 9999");
-    });
+    }); */
     // const { port1, port2 } = new MessageChannelMain();
     log.info("Dirname; ", __dirname);
     log.info("Corrected path: ", pathJoin(__dirname, "../../main/", "child.js"));
-    const { port1, port2 } = new MessageChannelMain();
     const child = utilityProcess.fork(pathJoin(__dirname, "../../main/", "child.js"), ["hello"], {
       stdio: "pipe",
     });
-    child.postMessage({ message: "hello" }, [port1]);
-    port1.on("message", (message) => {
-      log.info("Message from child: ", message);
-    });
-    child.stdout?.on("data", (data: string) => {
-      log.info("Child stdout: ", data);
+
+    child.stdout?.on("data", (data: Uint8Array) => {
+      // browserWindow.webContents.send("fromMain", data);
+      log.info("Message from child: ", data.byteLength);
     });
     child.on("message", (message) => {
-      log.info("Message from child: but directly", message);
+      browserWindow.webContents.send("fromMain", message);
+      // log.info("Message from child: but directly", message);
+    });
+    ipcMain.on("toMain", (e, msg: object) => {
+      log.info("Sending toMain event to child!");
+      child.postMessage(msg);
     });
   });
 

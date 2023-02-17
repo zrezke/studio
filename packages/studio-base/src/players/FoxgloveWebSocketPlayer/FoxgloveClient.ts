@@ -3,10 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import EventEmitter from "eventemitter3";
-import * as net from "net";
 
 import Log from "@foxglove/log";
-import WorkerSocketAdapter from "@foxglove/studio-base/players/FoxgloveWebSocketPlayer/WorkerSocketAdapter";
+//import WorkerSocketAdapter from "@foxglove/studio-base/players/FoxgloveWebSocketPlayer/WorkerSocketAdapter";
 import {
   BinaryOpcode,
   Channel,
@@ -14,7 +13,6 @@ import {
   ClientChannel,
   ClientChannelId,
   ClientMessage,
-  IWebSocket,
   Parameter,
   ParameterValues,
   ServerMessage,
@@ -50,22 +48,11 @@ export default class FoxgloveClient {
   public static SUPPORTED_SUBPROTOCOL = "foxglove.websocket.v1";
 
   private emitter = new EventEmitter<EventTypes>();
-  private server?: net.Server;
   private nextSubscriptionId = 0;
   private nextAdvertisementId = 0;
   private isOpen: boolean = false;
 
   public constructor() {
-    // log.info("Net: ", net);
-    // const server: net.Server = net.createServer((socket) => {
-    // this.ws = ws;
-    //   log.info("Ws created: ", this.ws);
-    // });
-    // (window as any).socketData.subscribers.push({
-    //   callback: (data: Buffer) => {
-    //     log.info("Received data: ", data);
-    //   },
-    // });
     this.emitter.addListener("lmao", () => {
       log.info("LMAO EVENT RECEIVED");
     });
@@ -73,7 +60,7 @@ export default class FoxgloveClient {
       log.info("Forked child: ", child);
     });
     window.addEventListener("forked", (event: any) => {
-      log.info("Forked with window");
+      log.info("Forked with window, event: ", event);
     });
 
     (window as any).api.receive("fromMain", (data: Uint8Array) => {

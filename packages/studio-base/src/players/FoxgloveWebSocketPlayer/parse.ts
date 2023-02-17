@@ -2,10 +2,10 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import Log from "@foxglove/log";
+//import Log from "@foxglove/log";
 import { BinaryOpcode, ServerMessage } from "@foxglove/ws-protocol";
 
-const log = Log.getLogger(__filename);
+//const log = Log.getLogger(__filename);
 export function parseServerMessage(buffer: ArrayBuffer): ServerMessage {
   const view = new DataView(buffer);
 
