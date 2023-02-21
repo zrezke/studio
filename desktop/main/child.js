@@ -13,7 +13,8 @@ try {
     socket.setNoDelay(true);
     let nBytes = 0;
     let nReceived = 0;
-    let received = [];
+    // let received = [];
+    const buffer = new Uint8Array(10000000);
     socket.on("data", (data) => {
       if (nBytes === 0) {
         // log.info("Length: ", data.byteLength);
@@ -21,22 +22,29 @@ try {
         // assume the image is bigger than 65k
         nReceived += data.byteLength - 4;
         // log.info("N Bytes: ", nBytes, " N Received: ", nReceived);
-        received.push(data.slice(4));
+        // received.push(data.slice(4));
+        buffer.set(data.slice(4), 0);
         if (nReceived >= nBytes) {
-          process.parentPort.postMessage(Buffer.concat(received));
-          received = [];
+          process.parentPort.postMessage(Buffer.from(buffer.slice(0, nReceived), 0, nReceived));
+
+          // process.parentPort.postMessage(Buffer.concat(received));
+          // received = null;
+          // received = [];
           nReceived = 0;
           nBytes = 0;
         }
         return;
       }
-      received.push(data);
+      // received.push(data);
+      buffer.set(data, nReceived);
       nReceived += data.byteLength;
       // log.info("N ALL: ", nReceived, " N BYTES: ", nBytes);
       if (nReceived >= nBytes) {
         // log.info("Sending");
-        process.parentPort.postMessage(Buffer.concat(received));
-        received = [];
+        process.parentPort.postMessage(Buffer.from(buffer.slice(0, nReceived), 0, nReceived));
+        // process.parentPort.postMessage(Buffer.concat(received));
+        // received = null;
+        // received = [];
         nReceived = 0;
         nBytes = 0;
       }
@@ -56,7 +64,7 @@ try {
     });
   });
 
-  server.listen(PORT, (s) => {});
+  server.listen(PORT, "localhost", (s) => {});
 
   // process.stdout.write(server.listening.toString());
 } catch (e) {

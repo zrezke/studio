@@ -51,6 +51,7 @@ export default class FoxgloveClient {
   private nextSubscriptionId = 0;
   private nextAdvertisementId = 0;
   private isOpen: boolean = false;
+  private gotFirstMessage: boolean = false;
 
   public constructor() {
     this.emitter.addListener("lmao", () => {
@@ -75,9 +76,10 @@ export default class FoxgloveClient {
       let message: ServerMessage;
       const buffer = data.buffer;
       // log.info("WTF: BUFLEN: ", buffer.byteLength);
-      try {
+      if (!this.gotFirstMessage) {
         message = JSON.parse(Buffer.from(data).toString("utf8"));
-      } catch (error) {
+        this.gotFirstMessage = true;
+      } else {
         message = parseServerMessage(buffer);
       }
       // } catch (error) {
@@ -102,6 +104,7 @@ export default class FoxgloveClient {
           this.emitter.emit("parameterValues", message);
           return;
         case BinaryOpcode.MESSAGE_DATA:
+          // log.info("Message data: ", message);
           this.emitter.emit("message", message);
           return;
         case BinaryOpcode.TIME:

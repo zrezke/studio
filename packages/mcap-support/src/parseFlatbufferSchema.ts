@@ -5,9 +5,12 @@
 import { ByteBuffer } from "flatbuffers";
 import { BaseType, Schema, SchemaT, FieldT, Parser, Table } from "flatbuffers_reflection";
 
+import Log from "@foxglove/log";
 import { RosMsgField } from "@foxglove/rosmsg";
 
 import { RosDatatypes } from "./types";
+
+const log = Log.getLogger(__filename);
 
 function typeForSimpleField(type: BaseType): string {
   switch (type) {
@@ -163,6 +166,7 @@ export function parseFlatbufferSchema(
   const schemaBuffer = new ByteBuffer(schemaArray);
   const rawSchema = Schema.getRootAsSchema(schemaBuffer);
   const schema = rawSchema.unpack();
+  log.info("Scheme: ", schema);
 
   let typeIndex = -1;
   for (let schemaIndex = 0; schemaIndex < schema.objects.length; ++schemaIndex) {
@@ -191,12 +195,15 @@ export function parseFlatbufferSchema(
     const byteBuffer = new ByteBuffer(
       new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength),
     );
+    // log.info("This is 13: ", byteBuffer, " BB pos: ", byteBuffer.position());
     const table = new Table(
       byteBuffer,
       typeIndex,
       byteBuffer.readInt32(byteBuffer.position()) + byteBuffer.position(),
     );
     const obj = parser.toObject(table);
+    // log.info("What is this object: ", obj);
+    obj.data = new Uint8Array(buffer.buffer, 77);
     return obj;
   };
   return { datatypes, deserializer };
