@@ -14,6 +14,7 @@
 import {
   PinholeCameraModel,
   decodeYUV,
+  decodeNV12,
   decodeRGB8,
   decodeRGBA8,
   decodeBGRA8,
@@ -137,6 +138,9 @@ function decodeMessageToBitmap(
       switch (encoding) {
         case "yuv422":
           decodeYUV(rawData as unknown as Int8Array, width, height, image.data);
+          break;
+        case "nv12":
+          decodeNV12(rawData as unknown as Int8Array, width, height, image.data);
           break;
         case "rgb8":
           decodeRGB8(rawData, width, height, image.data);
