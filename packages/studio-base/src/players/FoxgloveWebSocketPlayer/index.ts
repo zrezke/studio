@@ -100,7 +100,6 @@ export default class FoxgloveWebSocketPlayer implements Player {
   private _getParameterInterval?: ReturnType<typeof setInterval>;
   private _unresolvedPublications: AdvertiseOptions[] = [];
   private _publicationsByTopic = new Map<string, Publication>();
-  private fps: number = 0;
 
   public constructor({
     url,
@@ -111,10 +110,6 @@ export default class FoxgloveWebSocketPlayer implements Player {
     metricsCollector: PlayerMetricsCollectorInterface;
     sourceId: string;
   }) {
-    setInterval(() => {
-      log.info("FPS: ", this.fps);
-      this.fps = 0;
-    }, 1000);
     this._presence = PlayerPresence.INITIALIZING;
     this._metricsCollector = metricsCollector;
     this._url = url;
@@ -336,8 +331,6 @@ export default class FoxgloveWebSocketPlayer implements Player {
     });
 
     this._client.on("message", ({ subscriptionId, data }) => {
-      this.fps++;
-
       if (!this._hasReceivedMessage) {
         this._hasReceivedMessage = true;
         this._metricsCollector.recordTimeToFirstMsgs();

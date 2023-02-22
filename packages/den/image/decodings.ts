@@ -11,8 +11,6 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import Log from "@foxglove/log";
-
 export function decodeYUV(
   yuv: Int8Array,
   width: number,
@@ -47,11 +45,6 @@ export function decodeYUV(
   }
 }
 
-const log = Log.getLogger(__dirname);
-/*
- - For 1 NV12 pixel: YYYYYYYY UVUV
- - For a 2-pixel NV12 frame: YYYYYYYYYYYYYYYY UVUVUVUV
-*/
 export function decodeNV12(
   yuv: Int8Array,
   width: number,
@@ -59,31 +52,17 @@ export function decodeNV12(
   output: Uint8ClampedArray,
 ): void {
   let c = 0;
-  log.info("yuv: ", yuv);
 
   // populate 2 pixels at a time
-  // const bytesPerRow = width + (width % 2);
-  // const max = bytesPerRow * height;
   const max = width * height;
   const startOfUV = max; // 1 Y value per pixel
   for (let r = 0; r < max; r += 2) {
     const y1 = yuv[r]!;
     const y2 = yuv[r + 1]!;
     const uvOffset = startOfUV + Math.floor(r % width) + Math.floor(r / width / 2) * width;
-    // const uvRow = Math.floor(r / width / 2);
-    // const uvCol = Math.floor(r / 2) % (width / 2);
-    // const uvOffset = startOfUV + uvRow * width + uvCol * 2;
-
-    // if (r % width < 20) {
-    //   uvOffset -= 2 * width;
-    // }
 
     const u = yuv[uvOffset]! - 128;
     const v = yuv[uvOffset + 1]! - 128;
-
-    // if (r % width < 20 && r < 5 * width) {
-    //   log.info(`uvOffset-startOfUV: ${uvOffset - startOfUV} r: ${r} startOfUV: ${startOfUV}`);
-    // }
 
     // rgba
     output[c] = y1 + 1.402 * v;

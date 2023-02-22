@@ -20,7 +20,6 @@ import { useUpdateEffect } from "react-use";
 import { DeepPartial } from "ts-essentials";
 import { makeStyles } from "tss-react/mui";
 
-//import Log from "@foxglove/log";
 import { PanelExtensionContext, SettingsTreeAction, Topic } from "@foxglove/studio";
 import {
   PanelContextMenu,
