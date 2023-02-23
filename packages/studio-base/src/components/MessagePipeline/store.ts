@@ -8,6 +8,7 @@ import shallowequal from "shallowequal";
 import { createStore, StoreApi } from "zustand";
 
 import { Condvar } from "@foxglove/den/async";
+import Log from "@foxglove/log";
 import { MessageEvent } from "@foxglove/studio";
 import {
   AdvertiseOptions,
@@ -32,6 +33,7 @@ export function defaultPlayerState(): PlayerState {
     activeData: undefined,
   };
 }
+const log = Log.getLogger(__filename);
 
 export type MessagePipelineInternalState = {
   dispatch: (action: MessagePipelineStateAction) => void;
@@ -80,6 +82,7 @@ export function createMessagePipelineStore({
   return createStore((set, get) => ({
     player: initialPlayer,
     dispatch(action) {
+      // this takes 20ms per frame on my machine, how to make it faster?
       set((state) => reducer(state, action));
     },
     publishersById: {},

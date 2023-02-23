@@ -63,8 +63,14 @@ export default class FoxgloveClient {
     window.addEventListener("forked", (event: any) => {
       log.info("Forked with window, event: ", event);
     });
+    // (window as any).tcp.onConnection((msg: any) =>
+    //   log.info("Got tcp conn: ", msg, " window tcp: ", (window as any).tcp),
+    // );
 
-    (window as any).api.receive("fromMain", (data: Uint8Array) => {
+    // (window as any).tcp.openConnection("localhost", 9999);
+    log.info("Opened conn: tcp: ", (window as any).tcp);
+    (window as any).tcp.receiveTcp((data: Uint8Array) => {
+      // log.info("Received tcp data: ", data);
       if (!this.isOpen) {
         this.emitter.emit("open");
         this.isOpen = true;
@@ -75,6 +81,7 @@ export default class FoxgloveClient {
       // log.info("Receive through api: ", JSON.parse(Buffer.from(data).toString("utf8")));
       let message: ServerMessage;
       const buffer = data.buffer;
+      // log.info("buffer: ", buffer);
       // log.info("WTF: BUFLEN: ", buffer.byteLength);
       if (!this.gotFirstMessage) {
         message = JSON.parse(Buffer.from(data).toString("utf8"));
@@ -131,7 +138,7 @@ export default class FoxgloveClient {
 
   private reconnect() {
     log.info("Ipc bridge: ", (window as any).ipcRendererBridge);
-    (window as any).ipcRendererBridge.send("fork");
+    // (window as any).ipcRendererBridge.send("fork");
     // (window as any).ipcRendererBridge.on("forked", (child: any) => {
     //   log.info("Forked but in ipcRendererBridge");
     // });
@@ -207,7 +214,9 @@ export default class FoxgloveClient {
 
   private send(message: ClientMessage) {
     log.info("Sending back message: ", message);
-    (window as any).api.send("toMain", message);
-    // this.ws.send(JSON.stringify(message)!);
+    if ((window as any).tcp.sendTcp) {
+      (window as any).tcp.sendTcp(message);
+      // this.ws.send(JSON.stringify(message)!);
+    }
   }
 }

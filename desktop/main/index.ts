@@ -13,6 +13,7 @@ import {
   utilityProcess,
   MessageChannelMain,
 } from "electron";
+import installExtension, { REACT_DEVELOPER_TOOLS } from "electron-devtools-installer";
 import fs from "fs";
 import { join as pathJoin } from "path";
 
@@ -37,6 +38,12 @@ const log = Logger.getLogger(__filename);
 
 // https://github.com/electron/electron/issues/28422#issuecomment-987504138
 app.commandLine.appendSwitch("enable-experimental-web-platform-features");
+
+void app.whenReady().then(() => {
+  installExtension(REACT_DEVELOPER_TOOLS)
+    .then((name) => log.info(`Added Extension:  ${name}`))
+    .catch((err) => log.info("An error occurred: ", err));
+});
 
 /**
  * Determine whether an item in argv is a file that we should try opening as a data source.

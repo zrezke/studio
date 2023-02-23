@@ -4,10 +4,11 @@
 
 import "@sentry/electron/preload";
 import * as Sentry from "@sentry/electron/renderer";
-import { contextBridge, ipcRenderer } from "electron";
-import * as net from "net";
+import * as child_process from "child_process";
+import { contextBridge, ipcRenderer, utilityProcess } from "electron";
 import os from "os";
 import { join as pathJoin } from "path";
+import * as Stream from "stream";
 
 import { PreloaderSockets } from "@foxglove/electron-socket/preloader";
 import Logger from "@foxglove/log";
@@ -250,22 +251,190 @@ contextBridge.exposeInMainWorld("socketData", socketData);
 // });
 // contextBridge.exposeInMainWorld("server", server);
 
+// let callbackFunction: (data: Buffer) => void | undefined;
+log.info("Random log");
 contextBridge.exposeInMainWorld("api", {
+  // registerCallback: (callback: (data: Buffer) => void) => {
+  //   callbackFunction = callback;
+  // },
   send: (channel: string, data: Buffer) => {
     // whitelist channels
-    const validChannels = ["toMain"];
+    const validChannels = ["send_tcp_data"];
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, data);
     }
   },
-  receive: (channel: string, func: any) => {
-    const validChannels = ["fromMain"];
+  receive: (channel: string, func: (data: Buffer) => void) => {
+    const validChannels = ["receive_tcp_data"];
     if (validChannels.includes(channel)) {
       // Deliberately strip event as it includes `sender`
-      ipcRenderer.on(channel, (event, ...args) => func(...args));
+      // ipcMain.on(channel, (event, data: Buffer) => func(data));
+      // ipcRenderer.on(channel, (event, data: Buffer) => func(data));
+      // callbackFunction(data);
     }
   },
 });
+
+type ItcpBridge = {
+  receiveTcp: (f: (data: Uint8Array) => void) => void;
+  sendTcp: ((data: any) => void) | undefined;
+};
+
+let receiveTcp: ((data: Uint8Array) => void) | undefined;
+
+const tcpBridge: ItcpBridge = {
+  receiveTcp: (f: (data: Uint8Array) => void) => (receiveTcp = f),
+  sendTcp: undefined,
+};
+
+const port = 9999;
+
+log.info("Dirname; ", __dirname);
+log.info("Corrected path: ", pathJoin(__dirname, "../../main/", "child.js"));
+const child = child_process.spawn("node", [pathJoin(__dirname, "../../main/", "node_child.js")], {
+  stdio: ["pipe", "pipe", "pipe", "pipe"],
+});
+
+// child.on("message", (message) => {
+//   if (receiveTcp) {
+//     receiveTcp(message.data as Buffer);
+//   }
+//   // log.info("Received message from child: ", message);
+// });
+// tcpBridge.sendTcp = (data: any) => {
+//   log.info("Send tcp called");
+//   child.send(data);
+// };
+
+type IChildMessage = {
+  data: [];
+  type: string;
+};
+// const readableStream = new Stream.Duplex();
+
+// child.stdio[3]?.pipe(readableStream);
+let nReceived = 0;
+const metaChannel = child.stdio[3];
+const dataBuffer = Buffer.alloc(20000000);
+log.info("Meta channel: ", metaChannel);
+metaChannel?.on("data", (data: Uint8Array) => {
+  // log.info("Done: ", data, " N Received: ", nReceived, " Data Buffer: ", dataBuffer.byteLength);
+  if (receiveTcp) {
+    receiveTcp(Buffer.from(dataBuffer.slice(0, nReceived), 0, nReceived));
+  }
+  nReceived = 0;
+});
+child.stdout.on("data", (data: Uint8Array) => {
+  // log.info("Data: from stdou: ", data.byteLength);
+  dataBuffer.set(data, nReceived);
+  nReceived += data.byteLength;
+});
+
+child.on("message", (data: IChildMessage) => {
+  // log.info("Data: ", data);
+  // if (receiveTcp) {
+  //   receiveTcp(Uint8Array.from(data.data));
+  // }
+  // log.info("Received message from child: ", message);
+});
+tcpBridge.sendTcp = (data: any) => {
+  log.info("Send tcp called: ", data);
+  if (child.stdin) {
+    child.stdin.write(new TextEncoder().encode(JSON.stringify(data)));
+  } else {
+    log.info("Child: ", child);
+  }
+};
+contextBridge.exposeInMainWorld("tcp", tcpBridge);
+
+// ipcMain.on("toMain", (e, msg: object) => {
+//   log.info("Sending toMain event to child!");
+//   child.postMessage(msg);
+// });
+
+// const server = net.createServer((socket) => {});
+// log.info("Created server: ");
+// log.info("_sendTcp: ", _sendTcp);
+// server.listen(port, () => {});
+// let nBytes = 0;
+// let nReceived = 0;
+// server.on("connection", (socket) => {
+//   if (_onConnection) {
+//     _onConnection(socket);
+//   }
+//   // socket.setNoDelay(true);
+
+//   // let received = [];
+//   const buffer = new Uint8Array(50000000);
+//   socket.on("data", (data) => {
+//     if (nBytes === 0) {
+//       nBytes = data.readUInt32BE();
+//       log.info("N BYTES: ", nBytes);
+//       nReceived += data.byteLength - 4;
+//       buffer.set(data.slice(4), 0);
+//       if (nReceived >= nBytes) {
+//         if (_receiveTcp) {
+//           _receiveTcp(Buffer.from(buffer.slice(0, nReceived), 0, nReceived));
+//         }
+//         nReceived = 0;
+//         nBytes = 0;
+//       }
+//       return;
+//     }
+//     // try {
+//     buffer.set(data, nReceived);
+//     // } catch (e) {
+//     //   log.info("N bytes: ", nBytes);
+//     //   log.info("N received: ", nReceived);
+//     // }
+//     nReceived += data.byteLength;
+//     if (nReceived >= nBytes) {
+//       if (_receiveTcp) {
+//         _receiveTcp(Buffer.from(buffer.slice(0, nReceived), 0, nReceived));
+//       }
+//       nReceived = 0;
+//       nBytes = 0;
+//     }
+//   });
+//   log.info("Just before");
+//   _sendTcp = (msg: any) => {
+//     const encodedMessage = new TextEncoder().encode(JSON.stringify(msg));
+//     const bytesInMessage = new Uint8Array(4);
+//     const byteLength = encodedMessage.byteLength;
+//     bytesInMessage[0] = (byteLength >> 24) & 0xff;
+//     bytesInMessage[1] = (byteLength >> 16) & 0xff;
+//     bytesInMessage[2] = (byteLength >> 8) & 0xff;
+//     bytesInMessage[3] = byteLength & 0xff;
+//     socket.write(Buffer.concat([bytesInMessage, encodedMessage]));
+//   };
+//   contextBridge.exposeInMainWorld("sendTcp", _sendTcp);
+//   log.info("Send TCP: ", _sendTcp);
+// });
+
+// contextBridge.exposeInMainWorld("tcp", {
+//   sendTcp: _sendTcp,
+//   receiveTcp: (f: (data: Uint8Array) => void) => (_receiveTcp = f),
+//   onConnection: (handler: (msg: any) => void) => (_onConnection = handler),
+// });
+
+// log.info("Dirname; ", __dirname);
+// log.info("Corrected path: ", pathJoin(__dirname, "../../main/", "child.js"));
+// const child = utilityProcess.fork(pathJoin(__dirname, "../../main/", "child.js"), ["hello"], {
+//   stdio: "pipe",
+// });
+
+// child.stdout?.on("data", (data: Uint8Array) => {
+//   // browserWindow.webContents.send("fromMain", data);
+//   log.info("Message from child: ", data.byteLength);
+// });
+// child.on("message", (message) => {
+//   browserWindow.webContents.send("fromMain", message);
+//   // log.info("Message from child: but directly", message);
+// });
+// ipcMain.on("toMain", (e, msg: object) => {
+//   log.info("Sending toMain event to child!");
+//   child.postMessage(msg);
+// });
 
 // Load telemetry opt-out settings from window.process.argv
 function getTelemetrySettings(): [crashReportingEnabled: boolean] {
