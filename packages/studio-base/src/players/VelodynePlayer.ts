@@ -98,6 +98,10 @@ export default class VelodynePlayer implements Player {
     void this._open();
   }
 
+  public getPlayerType(): string | undefined {
+    return "Velodyne";
+  }
+
   private _open = async (): Promise<void> => {
     if (this._closed) {
       return;

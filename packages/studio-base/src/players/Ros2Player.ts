@@ -90,6 +90,10 @@ export default class Ros2Player implements Player {
     void this._open();
   }
 
+  public getPlayerType(): string | undefined {
+    return "ros2";
+  }
+
   private _importRos2MsgDefs(): void {
     // Add common message definitions from ROS2 (rcl_interfaces, common_interfaces, etc)
     for (const dataType in ros2galactic) {

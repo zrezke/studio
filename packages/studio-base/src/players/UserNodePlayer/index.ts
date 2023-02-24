@@ -161,6 +161,9 @@ export default class UserNodePlayer implements Player {
       name: uuidv4(),
     });
   };
+  public getPlayerType(): string | undefined {
+    return this._player.getPlayerType();
+  }
 
   public constructor(player: Player, userNodeActions: UserNodeActions) {
     this._player = player;

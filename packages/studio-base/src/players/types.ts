@@ -68,6 +68,7 @@ export interface Player {
   // Set the globalVariables for Players that support it.
   // This is generally used to pass new globalVariables to the UserNodePlayer
   setGlobalVariables(globalVariables: GlobalVariables): void;
+  getPlayerType(): string | undefined;
 }
 
 export enum PlayerPresence {

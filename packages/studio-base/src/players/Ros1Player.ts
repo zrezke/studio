@@ -96,6 +96,10 @@ export default class Ros1Player implements Player {
     void this._open();
   }
 
+  public getPlayerType(): string | undefined {
+    return "ros1";
+  }
+
   private _open = async (): Promise<void> => {
     const os = OsContextSingleton;
     if (this._closed || os == undefined) {

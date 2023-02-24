@@ -123,6 +123,7 @@ function addMessages(
   return newState ?? state;
 }
 
+// This store causes problems i think
 export function useImagePanelMessages(params: UseImagePanelMessagesParams): PublicState {
   const [store] = useState(() =>
     createStore<ImagePanelState>((set) => ({

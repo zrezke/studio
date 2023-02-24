@@ -18,8 +18,8 @@ import { makeStyles } from "tss-react/mui";
 import usePanZoom from "use-pan-and-zoom";
 import { v4 as uuidv4 } from "uuid";
 
+import Log from "@foxglove/log";
 import KeyListener from "@foxglove/studio-base/components/KeyListener";
-import { Topic } from "@foxglove/studio-base/players/types";
 import Rpc from "@foxglove/studio-base/util/Rpc";
 import WebWorkerManager from "@foxglove/studio-base/util/WebWorkerManager";
 
@@ -35,10 +35,11 @@ import type {
   NormalizedImageMessage,
 } from "../types";
 
+const log = Log.getLogger(__filename);
+
 type OnFinishRenderImage = () => void;
 
 type Props = {
-  topic?: Topic;
   image?: NormalizedImageMessage;
   rawMarkerData: RawMarkerData;
   config: Config;
@@ -108,7 +109,7 @@ export function ImageCanvas(props: Props): JSX.Element {
   const { mode } = config;
   const { classes, cx } = useStyles();
 
-  const renderInMainThread = (props.renderInMainThread ?? false) || !supportsOffscreenCanvas;
+  const renderInMainThread = true; //(props.renderInMainThread ?? false) || !supportsOffscreenCanvas;
 
   const [_, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
@@ -141,6 +142,7 @@ export function ImageCanvas(props: Props): JSX.Element {
 
   // setup the render function to render in the main thread or in the worker
   useLayoutEffect(() => {
+    log.info("RUNS ONCE");
     const newCanvas = document.createElement("canvas");
     setCanvas(newCanvas);
     canvasContainerRef.current?.appendChild(newCanvas);

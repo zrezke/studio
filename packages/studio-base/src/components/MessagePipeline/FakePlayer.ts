@@ -35,6 +35,10 @@ export default class FakePlayer implements Player {
     this.listener = listener;
   }
 
+  public getPlayerType(): string | undefined {
+    return undefined;
+  }
+
   public async emit({
     activeData,
     presence,

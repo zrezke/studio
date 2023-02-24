@@ -5,7 +5,6 @@
 import "@sentry/electron/preload";
 import * as Sentry from "@sentry/electron/renderer";
 import { contextBridge, ipcRenderer } from "electron";
-import * as net from "net";
 import os from "os";
 import { join as pathJoin } from "path";
 
@@ -251,15 +250,18 @@ contextBridge.exposeInMainWorld("socketData", socketData);
 // contextBridge.exposeInMainWorld("server", server);
 
 contextBridge.exposeInMainWorld("api", {
-  send: (channel: string, data: Buffer) => {
+  send: (channel: string, data: any) => {
     // whitelist channels
-    const validChannels = ["toMain"];
+    const validChannels = ["send_tcp_data", "render"];
     if (validChannels.includes(channel)) {
+      if (channel === "render") {
+        // log.info("Sending on render: ", data);
+      }
       ipcRenderer.send(channel, data);
     }
   },
-  receive: (channel: string, func: any) => {
-    const validChannels = ["fromMain"];
+  receive: (channel: string, func: (data: any) => void) => {
+    const validChannels = ["receive_tcp_data", "render"];
     if (validChannels.includes(channel)) {
       // Deliberately strip event as it includes `sender`
       ipcRenderer.on(channel, (event, ...args) => func(...args));

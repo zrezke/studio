@@ -158,66 +158,54 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
   const browserWindow = new BrowserWindow(windowOptions);
   ipcMain.on("fork", (e, msg) => {
     log.info("FORKING");
-    /*     const server = net.createServer((socket) => {
-      socket.setNoDelay(true);
-      let received: Buffer[] = [];
-      let nBytes = 0;
-      let nReceived = 0;
-      socket.on("data", (data: Buffer) => {
-        if (nBytes === 0) {
-          // log.info("Length: ", data.byteLength);
-          nBytes = data.readUInt32BE();
-          // assume the image is bigger than 65k
-          nReceived += data.byteLength - 4;
-          // log.info("N Bytes: ", nBytes, " N Received: ", nReceived);
-          received.push(data.slice(4));
-          if (nReceived >= nBytes) {
-            browserWindow.webContents.send("fromMain", Buffer.concat(received));
-            received = [];
-            nReceived = 0;
-            nBytes = 0;
-          }
-          return;
-        }
-        received.push(data);
-        nReceived += data.byteLength;
-        // log.info("N ALL: ", nReceived, " N BYTES: ", nBytes);
-        if (nReceived >= nBytes) {
-          // log.info("Sending");
-          browserWindow.webContents.send("fromMain", Buffer.concat(received));
-          received = [];
-          nReceived = 0;
-          nBytes = 0;
-        }
-        // browserWindow.webContents.send("fromMain", data);
-      });
-      socket.on("end", () => {
-        log.info(
-          "Received end: ",
-          received.length,
-          " Combined: ",
-          received.map((b) => b.length).reduce((a, b) => a + b, 0),
-        );
-        // browserWindow.webContents.send("fromMain", Buffer.concat(received));
-        received = [];
-      });
-      ipcMain.on("toMain", (e, msg: object) => {
-        log.info("Received main: ", msg);
-        const encodedMessage: Uint8Array = new TextEncoder().encode(JSON.stringify(msg));
-        const bytesInMessage = new Uint8Array(4);
-        const byteLength = encodedMessage.byteLength;
-        bytesInMessage[0] = (byteLength >> 24) & 0xff;
-        bytesInMessage[1] = (byteLength >> 16) & 0xff;
-        bytesInMessage[2] = (byteLength >> 8) & 0xff;
-        bytesInMessage[3] = byteLength & 0xff;
-        socket.write(Buffer.concat([bytesInMessage, encodedMessage]));
-        //socket.write(encodedMessage);
-      });
-    }); */
-    /*     server.listen(9999, () => {
-      log.info("SERVER LISTENING ON PORT 9999");
-    }); */
-    // const { port1, port2 } = new MessageChannelMain();
+    // const server = net.createServer((socket) => {
+    //   socket.setNoDelay(true);
+    //   let nBytes = 0;
+    //   let nReceived = 0;
+    //   // let received = [];
+    //   const buffer = new Uint8Array(10000000);
+    //   socket.on("data", (data) => {
+    //     try {
+    //       if (nBytes === 0) {
+    //         nBytes = data.readUInt32BE();
+    //         nReceived += data.byteLength - 4;
+    //         buffer.set(data.slice(4), 0);
+    //         if (nReceived >= nBytes) {
+    //           browserWindow.webContents.send(
+    //             "receive_tcp_data",
+    //             Buffer.from(buffer.slice(0, nReceived), 0, nReceived),
+    //           );
+    //           nReceived = 0;
+    //           nBytes = 0;
+    //         }
+    //         return;
+    //       }
+    //       buffer.set(data, nReceived);
+    //       nReceived += data.byteLength;
+    //       if (nReceived >= nBytes) {
+    //         log.info("BrowserWindow: ", browserWindow, "LMAO");
+    //         // browserWindow.webContents.send(
+    //         ipcMain.emit("receive_tcp_data", Buffer.from(buffer.slice(0, nReceived), 0, nReceived));
+
+    //         nReceived = 0;
+    //         nBytes = 0;
+    //       }
+    //     } catch (e) {}
+    //   });
+
+    //   ipcMain.on("send_tcp_data", (e, msg) => {
+    //     const encodedMessage = new TextEncoder().encode(JSON.stringify(msg));
+    //     const bytesInMessage = new Uint8Array(4);
+    //     const byteLength = encodedMessage.byteLength;
+    //     bytesInMessage[0] = (byteLength >> 24) & 0xff;
+    //     bytesInMessage[1] = (byteLength >> 16) & 0xff;
+    //     bytesInMessage[2] = (byteLength >> 8) & 0xff;
+    //     bytesInMessage[3] = byteLength & 0xff;
+    //     socket.write(Buffer.concat([bytesInMessage, encodedMessage]));
+    //   });
+    // });
+    // server.listen(9999, "localhost", (s) => {});
+
     log.info("Dirname; ", __dirname);
     log.info("Corrected path: ", pathJoin(__dirname, "../../main/", "child.js"));
     const child = utilityProcess.fork(pathJoin(__dirname, "../../main/", "child.js"), ["hello"], {
@@ -229,13 +217,17 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
       log.info("Message from child: ", data.byteLength);
     });
     child.on("message", (message) => {
-      browserWindow.webContents.send("fromMain", message);
+      browserWindow.webContents.send("receive_tcp_data", message);
       // log.info("Message from child: but directly", message);
     });
-    ipcMain.on("toMain", (e, msg: object) => {
+    ipcMain.on("send_tcp_data", (e, msg: object) => {
       log.info("Sending toMain event to child!");
       child.postMessage(msg);
     });
+  });
+
+  ipcMain.on("render", (e, msg) => {
+    browserWindow.webContents.send("render", msg);
   });
 
   // Forward full screen events to the renderer

@@ -92,9 +92,9 @@ async function main() {
 
   ReactDOM.render(
     <StrictMode>
-      <LogAfterRender>
-        <Root appConfiguration={appConfiguration} />
-      </LogAfterRender>
+      {/* <LogAfterRender> */}
+      <Root appConfiguration={appConfiguration} />
+      {/* </LogAfterRender> */}
     </StrictMode>,
     rootEl,
   );

@@ -18,6 +18,7 @@ import { useLatest, useMountedState } from "react-use";
 import { useShallowMemo } from "@foxglove/hooks";
 import Logger from "@foxglove/log";
 import { MessagePipelineProvider } from "@foxglove/studio-base/components/MessagePipeline";
+import { VideoMessagePipelineProvider } from "@foxglove/studio-base/components/VideoMessagePipeline";
 import { useAnalytics } from "@foxglove/studio-base/context/AnalyticsContext";
 import {
   LayoutState,
@@ -294,9 +295,11 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
   return (
     <>
       <PlayerSelectionContext.Provider value={value}>
-        <MessagePipelineProvider player={player} globalVariables={globalVariablesRef.current}>
-          {children}
-        </MessagePipelineProvider>
+        <VideoMessagePipelineProvider player={player} globalVariables={globalVariablesRef.current}>
+          <MessagePipelineProvider player={player} globalVariables={globalVariablesRef.current}>
+            {children}
+          </MessagePipelineProvider>
+        </VideoMessagePipelineProvider>
       </PlayerSelectionContext.Provider>
     </>
   );

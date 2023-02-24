@@ -82,8 +82,16 @@ export function createMessagePipelineStore({
   return createStore((set, get) => ({
     player: initialPlayer,
     dispatch(action) {
-      // this takes 20ms per frame on my machine, how to make it faster?
-      set((state) => reducer(state, action));
+      const starttime = Date.now();
+      // This is the actual problem - can I not use store?
+      // VIDEO MESSAGE PIPELINE: this takes +20ms per frame on my machine at high frame rate big video streams (it takes like 5ms when video stream is small), how to make it faster?
+      set((state) => {
+        const newState = reducer(state, action);
+        // log.info("Setting store: ", newState, " with action: ", action);
+        return newState;
+      });
+      const endtime = Date.now();
+      log.info("dispatch took", endtime - starttime, "ms");
     },
     publishersById: {},
     subscriptionsById: new Map(),
@@ -302,7 +310,7 @@ function updatePlayerStateAction(
   }
 
   return {
-    ...prevState,
+    // ...prevState,
     newTopicsBySubscriberId,
     renderDone: action.renderDone,
     public: newPublicState,

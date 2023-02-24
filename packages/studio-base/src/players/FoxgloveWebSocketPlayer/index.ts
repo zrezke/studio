@@ -119,6 +119,10 @@ export default class FoxgloveWebSocketPlayer implements Player {
     this._open();
   }
 
+  public getPlayerType(): string | undefined {
+    return "FoxgloveWebSocket";
+  }
+
   private _open = (): void => {
     if (this._closed) {
       return;

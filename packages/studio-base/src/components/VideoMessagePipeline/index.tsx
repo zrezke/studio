@@ -75,7 +75,7 @@ const selectRenderDone = (state: MessagePipelineInternalState) => state.renderDo
 const selectPublishers = (state: MessagePipelineInternalState) => state.public.publishers;
 const selectSubscriptions = (state: MessagePipelineInternalState) => state.public.subscriptions;
 
-export function MessagePipelineProvider({
+export function VideoMessagePipelineProvider({
   children,
   player,
   globalVariables,
@@ -85,7 +85,7 @@ export function MessagePipelineProvider({
     createMessagePipelineStore({ promisesToWaitForRef, initialPlayer: player }),
   );
   useEffect(() => {
-    if (!player || player.getPlayerType() === "FoxgloveWebSocket") {
+    if (player?.getPlayerType() !== "FoxgloveWebSocket") {
       return;
     }
     store.getState().dispatch({ type: "set-player", player });
@@ -99,7 +99,7 @@ export function MessagePipelineProvider({
   //
   // The delay of 0ms is intentional as we only want to give one timeout cycle to batch updates
   const debouncedPlayerSetSubscriptions = useMemo(() => {
-    if (!player || player.getPlayerType() === "FoxgloveWebSocket") {
+    if (!player || player.getPlayerType() !== "FoxgloveWebSocket") {
       return;
     }
     return debounce((subs: SubscribePayload[]) => {
@@ -122,12 +122,7 @@ export function MessagePipelineProvider({
       debouncedPlayerSetSubscriptions ? debouncedPlayerSetSubscriptions(subscriptions) : undefined,
     [debouncedPlayerSetSubscriptions, subscriptions],
   );
-  useEffect(() => {
-    if (!player || player.getPlayerType() === "FoxgloveWebSocket") {
-      return;
-    }
-    player.setPublishers(publishers);
-  }, [player, publishers]);
+  useEffect(() => player?.setPublishers(publishers), [player, publishers]);
 
   // Slow down the message pipeline framerate to the given FPS if it is set to less than 60
   const [messageRate] = useAppConfigurationValue<number>(AppSetting.MESSAGE_RATE);
@@ -143,10 +138,11 @@ export function MessagePipelineProvider({
 
   const dispatch = store.getState().dispatch;
   useEffect(() => {
-    log.info("Setting listener for: ", player?.getPlayerType(), " Player: ", player);
-    if (!player || player.getPlayerType() === "FoxgloveWebSocket") {
+    log.info("Setting listener: ", player?.getPlayerType());
+    if (!player || player.getPlayerType() !== "FoxgloveWebSocket") {
       return;
     }
+
     const { listener, cleanupListener } = createPlayerListener({
       msPerFrameRef,
       promisesToWaitForRef,
@@ -165,7 +161,7 @@ export function MessagePipelineProvider({
   }, [player, dispatch]);
 
   useEffect(() => {
-    if (!player || player.getPlayerType() === "FoxgloveWebSocket") {
+    if (!player || player.getPlayerType() !== "FoxgloveWebSocket") {
       return;
     }
     player.setGlobalVariables(globalVariables);

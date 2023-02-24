@@ -138,6 +138,10 @@ export default class RosbridgePlayer implements Player {
     this._open();
   }
 
+  public getPlayerType(): string | undefined {
+    return "rosbridge";
+  }
+
   private _open = (): void => {
     if (this._closed) {
       return;
