@@ -310,7 +310,7 @@ function updatePlayerStateAction(
   }
 
   return {
-    // ...prevState,
+    ...prevState,
     newTopicsBySubscriberId,
     renderDone: action.renderDone,
     public: newPublicState,

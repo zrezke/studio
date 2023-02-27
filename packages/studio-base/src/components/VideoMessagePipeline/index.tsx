@@ -255,7 +255,7 @@ function createPlayerListener(args: {
       const frameTime = Math.max(0, msPerFrameRef.current - delta);
 
       // Panels have the remaining frame time to invoke pause
-      setTimeout(async () => {
+      setImmediate(async () => {
         if (closed) {
           return;
         }
