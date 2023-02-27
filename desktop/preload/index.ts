@@ -250,6 +250,97 @@ contextBridge.exposeInMainWorld("socketData", socketData);
 // });
 // contextBridge.exposeInMainWorld("server", server);
 
+interface ISend {
+  send: ((data: Uint8Array) => void) | undefined;
+}
+const sendTcp: ISend = {
+  send: undefined,
+};
+
+const firstMsg = {
+  op: "subscribe",
+  subscriptions: [
+    {
+      id: 1,
+      channelId: 1,
+    },
+  ],
+};
+
+function transformMsg(): Buffer {
+  const encodedMessage = new TextEncoder().encode(JSON.stringify(firstMsg));
+  const bytesInMessage = new Uint8Array(4);
+  const byteLength = encodedMessage.byteLength;
+  bytesInMessage[0] = (byteLength >> 24) & 0xff;
+  bytesInMessage[1] = (byteLength >> 16) & 0xff;
+  bytesInMessage[2] = (byteLength >> 8) & 0xff;
+  bytesInMessage[3] = byteLength & 0xff;
+  // (window as any).sendTcp(Buffer.concat([bytesInMessage, encodedMessage]));
+  return Buffer.concat([bytesInMessage, encodedMessage]);
+}
+
+function createServer(onData: (data: Buffer) => void) {
+  const PORT = 9999;
+
+  const server = net.createServer((socket) => {
+    socket.setNoDelay(true);
+  });
+
+  server.on("connection", (socket) => {
+    contextBridge.exposeInMainWorld("sendTcp", (data: Uint8Array) => {
+      log.info("SENDNIG");
+      log.info("Sending data: ", data);
+      // socket.write(data);
+    });
+
+    contextBridge.exposeInMainWorld("socket", socket);
+    // sendTcp.send = (data: Uint8Array) => {
+    //   socket.write(data);
+    // };
+    log.info("Connectid: ", socket);
+    // socket.setNoDelay(true);
+    let nBytes = 0;
+    let nReceived = 0;
+    const buffer = new Uint8Array(10000000);
+    let firstMessage = true;
+    socket.on("data", (data: Buffer) => {
+      if (nBytes === 0) {
+        nBytes = data.readUInt32BE();
+        // assume the image is bigger than 65k
+        nReceived += data.byteLength - 4;
+        buffer.set(data.slice(4), 0);
+        if (nReceived >= nBytes) {
+          onData(Buffer.from(buffer.slice(0, nReceived), 0, nReceived));
+          if (firstMessage) {
+            firstMessage = false;
+            log.info("Tryin to send back");
+            socket.write(transformMsg());
+          }
+          nReceived = 0;
+          nBytes = 0;
+        }
+        return;
+      }
+      // received.push(data);
+      buffer.set(data, nReceived);
+      nReceived += data.byteLength;
+      // log.info("N ALL: ", nReceived, " N BYTES: ", nBytes);
+      if (nReceived >= nBytes) {
+        onData(Buffer.from(buffer.slice(0, nReceived), 0, nReceived));
+        if (firstMessage) {
+          firstMessage = false;
+          log.info("Tryin to send back");
+          socket.write(transformMsg());
+        }
+        nReceived = 0;
+        nBytes = 0;
+      }
+      // browserWindow.webContents.send("fromMain", data);
+    });
+  });
+  server.listen(PORT, () => {});
+}
+
 contextBridge.exposeInMainWorld("api", {
   send: (channel: string, data: Buffer) => {
     // whitelist channels
@@ -258,13 +349,21 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.send(channel, data);
     }
   },
+  sendSync: (channel: string, data: any) => {
+    // whitelist channels
+    const validChannels = ["toMain", "getFromMain"];
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.sendSync(channel, data);
+    }
+  },
   receive: (channel: string, func: any) => {
-    const validChannels = ["fromMain"];
+    const validChannels = ["fromMain", "haveFromMain"];
     if (validChannels.includes(channel)) {
       // Deliberately strip event as it includes `sender`
       ipcRenderer.on(channel, (event, ...args) => func(...args));
     }
   },
+  createServer: (onData: (data: Uint8Array) => void) => createServer(onData),
 });
 
 // Load telemetry opt-out settings from window.process.argv

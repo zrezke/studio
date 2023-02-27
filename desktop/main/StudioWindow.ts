@@ -16,6 +16,7 @@ import {
   utilityProcess,
   MessageChannelMain,
 } from "electron";
+import * as fs from "fs";
 import * as net from "net";
 import path from "path";
 import { join as pathJoin } from "path";
@@ -158,79 +159,52 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
   const browserWindow = new BrowserWindow(windowOptions);
   ipcMain.on("fork", (e, msg) => {
     log.info("FORKING");
-    /*     const server = net.createServer((socket) => {
-      socket.setNoDelay(true);
-      let received: Buffer[] = [];
-      let nBytes = 0;
-      let nReceived = 0;
-      socket.on("data", (data: Buffer) => {
-        if (nBytes === 0) {
-          // log.info("Length: ", data.byteLength);
-          nBytes = data.readUInt32BE();
-          // assume the image is bigger than 65k
-          nReceived += data.byteLength - 4;
-          // log.info("N Bytes: ", nBytes, " N Received: ", nReceived);
-          received.push(data.slice(4));
-          if (nReceived >= nBytes) {
-            browserWindow.webContents.send("fromMain", Buffer.concat(received));
-            received = [];
-            nReceived = 0;
-            nBytes = 0;
-          }
-          return;
-        }
-        received.push(data);
-        nReceived += data.byteLength;
-        // log.info("N ALL: ", nReceived, " N BYTES: ", nBytes);
-        if (nReceived >= nBytes) {
-          // log.info("Sending");
-          browserWindow.webContents.send("fromMain", Buffer.concat(received));
-          received = [];
-          nReceived = 0;
-          nBytes = 0;
-        }
-        // browserWindow.webContents.send("fromMain", data);
-      });
-      socket.on("end", () => {
-        log.info(
-          "Received end: ",
-          received.length,
-          " Combined: ",
-          received.map((b) => b.length).reduce((a, b) => a + b, 0),
-        );
-        // browserWindow.webContents.send("fromMain", Buffer.concat(received));
-        received = [];
-      });
-      ipcMain.on("toMain", (e, msg: object) => {
-        log.info("Received main: ", msg);
-        const encodedMessage: Uint8Array = new TextEncoder().encode(JSON.stringify(msg));
-        const bytesInMessage = new Uint8Array(4);
-        const byteLength = encodedMessage.byteLength;
-        bytesInMessage[0] = (byteLength >> 24) & 0xff;
-        bytesInMessage[1] = (byteLength >> 16) & 0xff;
-        bytesInMessage[2] = (byteLength >> 8) & 0xff;
-        bytesInMessage[3] = byteLength & 0xff;
-        socket.write(Buffer.concat([bytesInMessage, encodedMessage]));
-        //socket.write(encodedMessage);
-      });
-    }); */
-    /*     server.listen(9999, () => {
-      log.info("SERVER LISTENING ON PORT 9999");
-    }); */
-    // const { port1, port2 } = new MessageChannelMain();
     log.info("Dirname; ", __dirname);
     log.info("Corrected path: ", pathJoin(__dirname, "../../main/", "child.js"));
     const child = utilityProcess.fork(pathJoin(__dirname, "../../main/", "child.js"), ["hello"], {
       stdio: "pipe",
     });
 
+    const storedMessage = new Uint8Array(135097);
+    fs.open("300x300.bin", "r", (err, fd) => {
+      fs.read(fd, storedMessage, 0, 135097, 0, () => {});
+    });
+
     child.stdout?.on("data", (data: Uint8Array) => {
       // browserWindow.webContents.send("fromMain", data);
       log.info("Message from child: ", data.byteLength);
     });
-    child.on("message", (message) => {
-      browserWindow.webContents.send("fromMain", message);
+    // let firstMsg = true;
+    const messageQueue = new Array<Uint8Array>();
+    child.on("message", (message: Uint8Array) => {
+      // if (firstMsg) {
+      //   // browserWindow.webContents.send("fromMain", message);
+      //   firstMsg = false;
+      //   return;
+      // }
+      // This is async
+      // fs.open("300x300.bin", "w", (err, fd) => {
+      //   if (err) {
+      //     log.error("Error opening file: ", err);
+      //   }
+      //   fs.write(fd, message, (err) => {
+      //     if (err) {
+      //       log.error("Error writing to file: ", err);
+      //     }
+      //     fs.close(fd, (err) => {
+      //       if (err) {
+      //         log.error("Error closing file: ", err);
+      //       }
+      //     });
+      //   });
+      // });
+      messageQueue.push(message);
+      browserWindow.webContents.send("haveFromMain");
+      // browserWindow.webContents.send("fromMain", storedMessage);
       // log.info("Message from child: but directly", message);
+    });
+    ipcMain.addListener("getFromMain", (e, msg: object) => {
+      e.returnValue = messageQueue.shift();
     });
     ipcMain.on("toMain", (e, msg: object) => {
       log.info("Sending toMain event to child!");
