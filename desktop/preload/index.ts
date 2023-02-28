@@ -317,20 +317,80 @@ let nReceived = 0;
 const metaChannel = child.stdio[3];
 const dataBuffer = Buffer.alloc(20000000);
 log.info("Meta channel: ", metaChannel);
+
 metaChannel?.on("data", (data: Uint8Array) => {
-  // log.info("Done: ", data, " N Received: ", nReceived, " Data Buffer: ", dataBuffer.byteLength);
-  if (receiveTcp) {
-    receiveTcp(Buffer.from(dataBuffer.slice(0, nReceived), 0, nReceived));
-  }
+  log.info("Meta data: ", new TextDecoder().decode(data));
+  // if (receiveTcp) {
+  //   receiveTcp(Buffer.from(dataBuffer.slice(0, nReceived), 0, nReceived));
+  //   log.info("Buffer: ", Buffer.from(dataBuffer.slice(0, nReceived), 0, nReceived));
+  //   log.info("NReceived: ", nReceived);
+  // }
   nReceived = 0;
 });
+
+// hacky
+let totalB: undefined | bigint = BigInt(1290);
+const imageSize = 3110497;
 child.stdout.on("data", (data: Uint8Array) => {
-  // log.info("Data: from stdou: ", data.byteLength);
-  dataBuffer.set(data, nReceived);
-  nReceived += data.byteLength;
+  // log.info("Data event: ", new TextDecoder().decode(data));
+  try {
+    // log.info("Data event: ", data);
+    if (totalB == undefined) {
+      const buffer = Buffer.from(data.slice(0, 8));
+      totalB = buffer.readBigInt64LE();
+      // log.info("TotalB: ", totalB);
+      // log.info("Buflen: ", data.byteLength);
+      // print totalB as binary
+      // log.info("TotalB as binary: ", totalB.toString(2));
+      if (data.byteLength > 8) {
+        data.set(data.slice(8));
+      } else {
+        return;
+      }
+    }
+    dataBuffer.set(data, nReceived);
+    nReceived += data.byteLength;
+    // log.info("nReceived: ", nReceived);
+    // log.info("B LEN: ", data.byteLength);
+    if (BigInt(nReceived) >= totalB) {
+      if (receiveTcp) {
+        // log.info("Got data:", nReceived);
+        try {
+          receiveTcp(Buffer.from(dataBuffer.slice(0, Number(totalB)), 0, Number(totalB)));
+        } catch {}
+        // nReceived = 0;
+        // totalB = undefined;
+        if (nReceived > Number(totalB)) {
+          // log.info("Offs:", Number(totalB), " N read: ", nReceived);
+          // const cpy = Buffer.alloc(20000000);
+          // dataBuffer.copy(cpy);
+          // log.info("Old Data Buffer: ", cpy);
+          // const newTotalB = dataBuffer.readBigInt64LE(Number(totalB));
+
+          // log.info("New totalB: ", newTotalB);
+          // log.info("Data offset: ", Number(totalB) + 8);
+          // dataBuffer.set(dataBuffer.slice(Number(totalB) + 8), 0);
+          dataBuffer.set(dataBuffer.slice(Number(totalB)), 0);
+          // log.info("New Data Buffer: ", dataBuffer);
+          // nReceived = nReceived - Number(totalB) - 8;
+          nReceived = nReceived - Number(totalB);
+          // totalB = newTotalB;
+
+          totalB = BigInt(imageSize);
+        } else {
+          // totalB = undefined;
+          totalB = BigInt(imageSize);
+          nReceived = 0;
+        }
+      }
+    }
+  } catch (e) {
+    log.info("Doesnt work:", e.toString());
+  }
 });
 
 child.on("message", (data: IChildMessage) => {
+  log.info("Message from child: ", data);
   // log.info("Data: ", data);
   // if (receiveTcp) {
   //   receiveTcp(Uint8Array.from(data.data));
