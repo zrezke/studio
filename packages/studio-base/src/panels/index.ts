@@ -181,6 +181,13 @@ const builtin: PanelInfo[] = [
     thumbnail: tabThumbnail,
     module: async () => await import("./Tab"),
   },
+  {
+    title: "DepthaiPipelineGraph",
+    type: "DepthaiPipelineGraph",
+    description: "Display Depthai Pipeline Graph",
+    thumbnail: "https://i.imgur.com/3ZQ3Z9M.png",
+    module: async () => await import("./DepthaiPipelineGraph"),
+  },
 ];
 
 const debug: PanelInfo[] = [
