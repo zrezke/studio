@@ -118,8 +118,6 @@ export function PipelineNode({ data, id }: PipelineNodeProps): JSX.Element {
   // }
   useEffect(() => {
     updateNodeInternals(id);
-    log.info("id: ", id);
-    log.info("Ports: ", inputPorts, outputPorts);
   }, [inputPorts, outputPorts, id]);
   return (
     <div
