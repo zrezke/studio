@@ -2,8 +2,8 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { useCallback, useMemo } from "react";
-import { Handle, Position } from "reactflow";
+import { useCallback, useEffect, useMemo } from "react";
+import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 
 import Log from "@foxglove/log";
 
@@ -26,6 +26,7 @@ interface Port {
 }
 
 export interface PipelineNodeProps {
+  id: string;
   data: {
     name: string;
     ports: Port[];
@@ -34,10 +35,12 @@ export interface PipelineNodeProps {
 
 const fontSize = 8;
 
-export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
+export function PipelineNode({ data, id }: PipelineNodeProps): JSX.Element {
   const onChange = useCallback((evt) => {
     // console.log(evt.target.value);
   }, []);
+
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const inputPorts = useMemo(
     () =>
@@ -47,6 +50,7 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
           return (
             <>
               <div
+                key={port.name}
                 style={{
                   display: "flex",
                   flexDirection: "row",
@@ -55,7 +59,8 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
                 }}
               >
                 <Handle
-                  type="source"
+                  key={port.name}
+                  type="target"
                   style={{
                     position: "relative",
                     fontSize,
@@ -66,13 +71,13 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
                   isConnectable={false}
                 ></Handle>
                 {port.name}
-                {/* </div> */}
               </div>
             </>
           );
         }),
     [data],
   );
+
   const outputPorts = useMemo(
     () =>
       data.ports
@@ -81,6 +86,7 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
           return (
             <>
               <div
+                key={port.name}
                 style={{
                   display: "flex",
                   flexDirection: "row",
@@ -90,6 +96,7 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
               >
                 {port.name}
                 <Handle
+                  key={port.name}
                   type="source"
                   style={{
                     position: "relative",
@@ -106,6 +113,14 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
         }),
     [data],
   );
+  // for (const port of data.ports) {
+  //   updateNodeInternals(data.name + "-" + port.name);
+  // }
+  useEffect(() => {
+    updateNodeInternals(id);
+    log.info("id: ", id);
+    log.info("Ports: ", inputPorts, outputPorts);
+  }, [inputPorts, outputPorts, id]);
   return (
     <div
       style={{

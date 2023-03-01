@@ -15,6 +15,7 @@ import ReactFlow, {
   EdgeChange,
   Connection,
   Position,
+  ConnectionMode,
 } from "reactflow";
 
 import "reactflow/dist/style.css";
@@ -56,7 +57,7 @@ const initialNodes: Node[] = [
       name: "ColorCamera",
       ports: [
         {
-          name: "preview",
+          name: "video",
           type: 0,
           node_id: "0",
           group_name: "",
@@ -83,7 +84,7 @@ const initialNodes: Node[] = [
           wait_for_message: false,
         },
         {
-          name: "video",
+          name: "preview",
           type: 0,
           node_id: "0",
           group_name: "",
@@ -93,6 +94,15 @@ const initialNodes: Node[] = [
         },
         {
           name: "raw",
+          type: 0,
+          node_id: "0",
+          group_name: "",
+          blocking: false,
+          queue_size: 8,
+          wait_for_message: false,
+        },
+        {
+          name: "frameEvent",
           type: 0,
           node_id: "0",
           group_name: "",
@@ -126,10 +136,10 @@ const initialNodes: Node[] = [
   },
   {
     data: {
-      name: "VideoEncoder",
+      name: "ImageManip",
       ports: [
         {
-          name: "bitstream",
+          name: "out",
           type: 0,
           node_id: "2",
           group_name: "",
@@ -138,18 +148,27 @@ const initialNodes: Node[] = [
           wait_for_message: false,
         },
         {
-          name: "in",
+          name: "inputConfig",
           type: 3,
           node_id: "2",
           group_name: "",
           blocking: true,
-          queue_size: 4,
+          queue_size: 8,
+          wait_for_message: false,
+        },
+        {
+          name: "inputImage",
+          type: 3,
+          node_id: "2",
+          group_name: "",
+          blocking: false,
+          queue_size: 2,
           wait_for_message: true,
         },
       ],
     },
     id: "2",
-    position: { x: 100, y: 0 },
+    position: { x: 200, y: 0 },
     type: "pipelineNode",
   },
   {
@@ -159,7 +178,7 @@ const initialNodes: Node[] = [
         {
           name: "in",
           type: 3,
-          node_id: "1",
+          node_id: "4",
           group_name: "",
           blocking: true,
           queue_size: 8,
@@ -167,21 +186,104 @@ const initialNodes: Node[] = [
         },
       ],
     },
+    id: "4",
+    position: { x: 200, y: 100 },
+    type: "pipelineNode",
+  },
+  {
+    data: {
+      name: "DetectionNetwork",
+      ports: [
+        {
+          name: "out",
+          type: 0,
+          node_id: "1",
+          group_name: "",
+          blocking: false,
+          queue_size: 8,
+          wait_for_message: false,
+        },
+        {
+          name: "passthrough",
+          type: 0,
+          node_id: "1",
+          group_name: "",
+          blocking: false,
+          queue_size: 8,
+          wait_for_message: false,
+        },
+        {
+          name: "in",
+          type: 3,
+          node_id: "1",
+          group_name: "",
+          blocking: true,
+          queue_size: 5,
+          wait_for_message: true,
+        },
+      ],
+    },
     id: "1",
-    position: { x: 200, y: 0 },
+    position: { x: 400, y: 0 },
+    type: "pipelineNode",
+  },
+  {
+    data: {
+      name: "XLinkOut",
+      ports: [
+        {
+          name: "in",
+          type: 3,
+          node_id: "3",
+          group_name: "",
+          blocking: true,
+          queue_size: 8,
+          wait_for_message: true,
+        },
+      ],
+    },
+    id: "3",
+    position: { x: 600, y: 0 },
+    type: "pipelineNode",
+  },
+  {
+    data: {
+      name: "XLinkOut",
+      ports: [
+        {
+          name: "in",
+          type: 3,
+          node_id: "5",
+          group_name: "",
+          blocking: true,
+          queue_size: 8,
+          wait_for_message: true,
+        },
+      ],
+    },
+    id: "5",
+    position: { x: 600, y: 100 },
     type: "pipelineNode",
   },
 ];
 
 const initialEdges: Edge[] = [
   {
-    id: "edge-1",
-    source: "0",
-    sourceHandle: "preview",
-    target: "1",
+    source: "1",
+    target: "5",
     targetHandle: "in",
-    animated: true,
-    label: "preview",
+    sourceHandle: "passthrough",
+    id: "1[passthrough]-5[in]",
+  },
+  { source: "0", target: "4", targetHandle: "in", sourceHandle: "preview", id: "0[preview]-4[in]" },
+  { source: "1", target: "3", targetHandle: "in", sourceHandle: "out", id: "1[out]-3[in]" },
+  { source: "2", target: "1", targetHandle: "in", sourceHandle: "out", id: "2[out]-1[in]" },
+  {
+    source: "0",
+    target: "2",
+    targetHandle: "inputImage",
+    sourceHandle: "preview",
+    id: "0[preview]-2[inputImage]",
   },
 ];
 
@@ -220,6 +322,7 @@ function DepthaiPipelineGraph(): JSX.Element {
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={fitViewOptions}
+        connectionMode={ConnectionMode.Loose}
       />
     </>
   );
