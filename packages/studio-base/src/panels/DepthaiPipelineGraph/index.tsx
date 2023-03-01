@@ -122,7 +122,6 @@ const initialNodes: Node[] = [
     },
     id: "0",
     position: { x: 0, y: 0 },
-    style: { border: "1px solid #777", padding: 10, background: "#faa" },
     type: "pipelineNode",
   },
   {
@@ -151,7 +150,6 @@ const initialNodes: Node[] = [
     },
     id: "2",
     position: { x: 100, y: 0 },
-    style: { border: "1px solid #777", padding: 10, background: "#faa" },
     type: "pipelineNode",
   },
   {
@@ -171,7 +169,6 @@ const initialNodes: Node[] = [
     },
     id: "1",
     position: { x: 200, y: 0 },
-    style: { border: "1px solid #777", padding: 10, background: "#faa" },
     type: "pipelineNode",
   },
 ];

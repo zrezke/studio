@@ -46,26 +46,28 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
         .map((port, i) => {
           return (
             <>
-              {/* <div key={port.name} style={{ top: 10 * (i + 1), fontSize: 10, textAlign: "right" }}> */}
               <div
                 style={{
-                  left: 4,
-                  display: "block",
-                  top: 10 * (i + 1) - fontSize / 2,
+                  display: "flex",
+                  flexDirection: "row",
                   fontSize,
-                  position: "absolute",
+                  justifyContent: "flex-start",
                 }}
               >
+                <Handle
+                  type="source"
+                  style={{
+                    position: "relative",
+                    fontSize,
+                    marginLeft: "1px",
+                  }}
+                  position={Position.Left}
+                  id={port.name}
+                  isConnectable={false}
+                ></Handle>
                 {port.name}
+                {/* </div> */}
               </div>
-              <Handle
-                type="source"
-                position={Position.Left}
-                id={port.name}
-                style={{ top: 10 * (i + 1), fontSize }}
-                isConnectable={false}
-              ></Handle>
-              {/* </div> */}
             </>
           );
         }),
@@ -78,38 +80,89 @@ export function PipelineNode({ data }: PipelineNodeProps): JSX.Element {
         .map((port, i) => {
           return (
             <>
-              {/* <div key={port.name} style={{ top: 10 * (i + 1), fontSize: 10, textAlign: "right" }}> */}
               <div
                 style={{
-                  right: 4,
-                  display: "block",
-                  top: 10 * (i + 1) - fontSize / 2,
+                  display: "flex",
+                  flexDirection: "row",
                   fontSize,
-                  position: "absolute",
+                  justifyContent: "flex-end",
                 }}
               >
                 {port.name}
+                <Handle
+                  type="source"
+                  style={{
+                    position: "relative",
+                    fontSize,
+                  }}
+                  position={Position.Right}
+                  id={port.name}
+                  isConnectable={false}
+                ></Handle>
+                {/* </div> */}
               </div>
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={port.name}
-                style={{ top: 10 * (i + 1), fontSize }}
-                isConnectable={false}
-              ></Handle>
-              {/* </div> */}
             </>
           );
         }),
     [data],
   );
   return (
-    <>
-      <div>
-        <strong>{data.name}</strong>
+    <div
+      style={{
+        width: "fit-content",
+        height: "fit-content",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "#faa",
+        padding: "2px",
+        border: "none",
+        borderRadius: "4px",
+      }}
+    >
+      <div
+        style={{
+          filter: "brightness(0.8)",
+          fontSize: 10,
+          border: "none",
+          borderRadius: "4px",
+          backgroundColor: "#faa",
+          fontWeight: "500",
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "center",
+          paddingLeft: "4px",
+          paddingRight: "4px",
+        }}
+      >
+        {data.name}
       </div>
-      {inputPorts}
-      {outputPorts}
-    </>
+      <div
+        style={{
+          display: "flex",
+          position: "relative",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          marginTop: "4px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            marginRight: "24px",
+          }}
+        >
+          {inputPorts}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {outputPorts}
+        </div>
+      </div>
+    </div>
   );
 }
