@@ -97,6 +97,7 @@
     "electron": "22.1.0",
     "electron-builder": "23.6.0",
     "electron-notarize": "1.2.2",
+    "electron-rebuild": "3.2.9",
     "eslint": "8.32.0",
     "eslint-config-prettier": "8.6.0",
     "eslint-import-resolver-webpack": "0.13.2",
@@ -126,5 +127,8 @@
     "webpack-dev-server": "4.11.1",
     "webpack-hot-middleware": "2.25.3"
   },
-  "packageManager": "yarn@3.3.1"
+  "packageManager": "yarn@3.3.1",
+  "dependencies": {
+    "zeromq": "6.0.0-beta.16"
+  }
 }

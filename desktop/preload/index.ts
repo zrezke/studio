@@ -8,6 +8,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import * as net from "net";
 import os from "os";
 import { join as pathJoin } from "path";
+import * as zmq from "zeromq";
 
 import { PreloaderSockets } from "@foxglove/electron-socket/preloader";
 import Logger from "@foxglove/log";
@@ -266,6 +267,27 @@ contextBridge.exposeInMainWorld("api", {
     }
   },
 });
+const zmqPushSock = new zmq.Push();
+zmqPushSock.connect("tcp://127.0.0.1:3001");
+
+async function zmqSend(data: Buffer) {
+  await zmqPushSock.send(data);
+}
+
+async function createZmqPullSocket(onData: (data: Buffer) => void) {
+  const sock = new zmq.Pull();
+  await sock.bind("tcp://127.0.0.1:3000");
+  while (true) {
+    const [recv] = await sock.receive();
+    onData(recv!);
+  }
+  // for await (const [msg] of sock) {
+  //     onData(msg!);
+  // }
+}
+
+contextBridge.exposeInMainWorld("createZmqPullSocket", createZmqPullSocket);
+contextBridge.exposeInMainWorld("zmqSend", zmqSend);
 
 // Load telemetry opt-out settings from window.process.argv
 function getTelemetrySettings(): [crashReportingEnabled: boolean] {

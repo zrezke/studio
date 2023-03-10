@@ -64,7 +64,10 @@ export default class FoxgloveClient {
       log.info("Forked with window, event: ", event);
     });
 
-    (window as any).api.receive("fromMain", (data: Uint8Array) => {
+    log.info("Creating new FoxgloveClient");
+    log.info("Create ZMQ socket: ", (window as any).createZmqPullSocket);
+
+    (window as any).createZmqPullSocket((data: Uint8Array) => {
       if (!this.isOpen) {
         this.emitter.emit("open");
         this.isOpen = true;
@@ -207,7 +210,8 @@ export default class FoxgloveClient {
 
   private send(message: ClientMessage) {
     log.info("Sending back message: ", message);
-    (window as any).api.send("toMain", message);
+    // (window as any).api.send("toMain", message);
+    (window as any).zmqSend(JSON.stringify(message));
     // this.ws.send(JSON.stringify(message)!);
   }
 }

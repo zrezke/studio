@@ -42,7 +42,9 @@ export default (_: unknown, argv: WebpackArgv): Configuration => {
       publicPath: "",
       path: path.resolve(__dirname, ".webpack", "main"),
     },
-
+    node: {
+      __dirname: true,
+    },
     module: {
       rules: [
         {
