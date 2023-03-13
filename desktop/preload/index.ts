@@ -275,15 +275,12 @@ async function zmqSend(data: Buffer) {
 }
 
 async function createZmqPullSocket(onData: (data: Buffer) => void) {
-  const sock = new zmq.Pull();
+  const sock = new zmq.Pull({ receiveHighWaterMark: 0 });
   await sock.bind("tcp://127.0.0.1:3000");
   while (true) {
     const [recv] = await sock.receive();
     onData(recv!);
   }
-  // for await (const [msg] of sock) {
-  //     onData(msg!);
-  // }
 }
 
 contextBridge.exposeInMainWorld("createZmqPullSocket", createZmqPullSocket);

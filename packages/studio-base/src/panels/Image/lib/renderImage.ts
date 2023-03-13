@@ -84,22 +84,37 @@ export async function renderImage({
   }
 
   try {
-    const bitmap = await decodeMessageToBitmap(imageMessage, options);
+    let frameImage: VideoFrame;
+    if (imageMessage.type === "raw") {
+      frameImage = new VideoFrame(imageMessage.data, {
+        format: codecMap.get(imageMessage.encoding)!,
+        codedWidth: imageMessage.width,
+        codedHeight: imageMessage.height,
+        timestamp: imageMessage.stamp.sec,
+      });
+    } else {
+      const imageDecoder = new ImageDecoder({
+        type: `image/${imageMessage.format}`,
+        data: imageMessage.data,
+      });
+      frameImage = (await imageDecoder.decode({ frameIndex: 0 })).image;
+      imageDecoder.close();
+    }
 
     if (options?.resizeCanvas === true) {
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
+      canvas.width = frameImage.displayWidth;
+      canvas.height = frameImage.displayHeight;
     }
 
     const dimensions = render({
       canvas,
       geometry,
       hitmapCanvas,
-      bitmap,
+      frameImage,
       imageSmoothing,
       markerData,
     });
-    bitmap.close();
+    frameImage.close();
     return dimensions;
   } catch (error) {
     // If there is an error, clear the image and re-throw it.
@@ -116,75 +131,20 @@ function maybeUnrectifyPixel(cameraModel: PinholeCameraModel | undefined, point:
   return cameraModel?.unrectifyPixel({ x: 0, y: 0 }, point) ?? point;
 }
 
-// Potentially performance-sensitive; await can be expensive
-// eslint-disable-next-line @typescript-eslint/promise-function-async
-function decodeMessageToBitmap(
-  imageMessage: NormalizedImageMessage,
-  options: RenderOptions = {},
-): Promise<ImageBitmap> {
-  const { data: rawData } = imageMessage;
-  if (!(rawData instanceof Uint8Array)) {
-    throw new Error("Message must have data of type Uint8Array");
-  }
-
-  switch (imageMessage.type) {
-    case "compressed": {
-      const image = new Blob([rawData], { type: `image/${imageMessage.format}` });
-      return self.createImageBitmap(image);
-    }
-    case "raw": {
-      const { is_bigendian, width, height, encoding } = imageMessage;
-      const image = new ImageData(width, height);
-      switch (encoding) {
-        case "yuv422":
-          decodeYUV(rawData as unknown as Int8Array, width, height, image.data);
-          break;
-        case "nv12":
-          decodeNV12(rawData as unknown as Int8Array, width, height, image.data);
-          break;
-        case "rgb8":
-          decodeRGB8(rawData, width, height, image.data);
-          break;
-        case "rgba8":
-          decodeRGBA8(rawData, width, height, image.data);
-          break;
-        case "bgra8":
-          decodeBGRA8(rawData, width, height, image.data);
-          break;
-        case "bgr8":
-        case "8UC3":
-          decodeBGR8(rawData, width, height, image.data);
-          break;
-        case "32FC1":
-          decodeFloat1c(rawData, width, height, is_bigendian, image.data);
-          break;
-        case "bayer_rggb8":
-          decodeBayerRGGB8(rawData, width, height, image.data);
-          break;
-        case "bayer_bggr8":
-          decodeBayerBGGR8(rawData, width, height, image.data);
-          break;
-        case "bayer_gbrg8":
-          decodeBayerGBRG8(rawData, width, height, image.data);
-          break;
-        case "bayer_grbg8":
-          decodeBayerGRBG8(rawData, width, height, image.data);
-          break;
-        case "mono8":
-        case "8UC1":
-          decodeMono8(rawData, width, height, image.data);
-          break;
-        case "mono16":
-        case "16UC1":
-          decodeMono16(rawData, width, height, is_bigendian, image.data, options);
-          break;
-        default:
-          throw new Error(`Unsupported encoding ${encoding}`);
-      }
-      return self.createImageBitmap(image);
-    }
-  }
-}
+/** Maps studio image encodings to VideoFrame encodings */
+const codecMap: Map<string, VideoPixelFormat> = new Map(
+  Object.entries({
+    yuv422: "I422",
+    nv12: "NV12",
+    yuv420: "I420",
+    j420: "I420A", // I don't know if this is correct and if my naming makes sense "j420"
+    yuv444: "I444",
+    rgb8: "RGBX",
+    rgba8: "RGBA",
+    bgra8: "BGRA",
+    bgr8: "BGRX",
+  }),
+);
 
 function clearCanvas(canvas?: RenderableCanvas) {
   if (canvas) {
@@ -199,14 +159,14 @@ function clearCanvas(canvas?: RenderableCanvas) {
 }
 
 function render({
-  bitmap,
+  frameImage,
   canvas,
   geometry,
   hitmapCanvas,
   imageSmoothing,
   markerData,
 }: {
-  bitmap: ImageBitmap;
+  frameImage: VideoFrame;
   canvas: RenderableCanvas;
   geometry: RenderGeometry;
   hitmapCanvas: RenderableCanvas | undefined;
@@ -215,8 +175,8 @@ function render({
 }): RenderDimensions | undefined {
   const bitmapDimensions =
     geometry.rotation % 180 === 0
-      ? { width: bitmap.width, height: bitmap.height }
-      : { width: bitmap.height, height: bitmap.width };
+      ? { width: frameImage.displayWidth, height: frameImage.displayHeight }
+      : { width: frameImage.displayHeight, height: frameImage.displayWidth };
 
   const canvasCtx = canvas.getContext("2d") as  // https://github.com/microsoft/TypeScript-DOM-lib-generator/issues/1480
     | CanvasRenderingContext2D
@@ -259,16 +219,17 @@ function render({
 
   // center the image in the viewport
   // also sets 0,0 as the upper left corner of the image since markers are drawn from 0,0 on the image
-  ctx.translate(-bitmap.width / 2, -bitmap.height / 2);
+  ctx.translate(-frameImage.displayWidth / 2, -frameImage.displayHeight / 2);
 
-  ctx.drawImage(bitmap, 0, 0);
+  ctx.drawImage(frameImage, 0, 0);
 
   // The bitmap images from the image message may be resized to conserve space
   // while the markers are positioned relative to the original image size.
   // Original width/height are the image dimensions for the marker positions
   // These dimensions are used to scale the markers positions separately from the bitmap size
-  const { originalWidth = bitmap.width, originalHeight = bitmap.height } = markerData ?? {};
-  ctx.scale(bitmap.width / originalWidth, bitmap.height / originalHeight);
+  const { originalWidth = frameImage.displayWidth, originalHeight = frameImage.displayHeight } =
+    markerData ?? {};
+  ctx.scale(frameImage.displayWidth / originalWidth, frameImage.displayHeight / originalHeight);
   const transform = ctx.getTransform();
 
   try {
