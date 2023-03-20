@@ -55,6 +55,10 @@ let hasLoggedCameraModelError: boolean = false;
 // Empirically 3 seems like a good threshold here.
 const FAST_POINT_SIZE_THRESHOlD = 3;
 
+// 4k
+const MAX_RESOLUTION = { width: 3840, height: 2160 };
+const RGBABuffer = new Uint8ClampedArray(MAX_RESOLUTION.width * MAX_RESOLUTION.height * 4);
+
 // Given a canvas, an image message, and marker info, render the image to the canvas.
 export async function renderImage({
   canvas,
@@ -86,12 +90,22 @@ export async function renderImage({
   try {
     let frameImage: VideoFrame;
     if (imageMessage.type === "raw") {
-      frameImage = new VideoFrame(imageMessage.data, {
-        format: codecMap.get(imageMessage.encoding)!,
-        codedWidth: imageMessage.width,
-        codedHeight: imageMessage.height,
-        timestamp: imageMessage.stamp.sec,
-      });
+      if (imageMessage.encoding === "rgb8") {
+        decodeRGB8(imageMessage.data, imageMessage.width, imageMessage.height, RGBABuffer);
+        frameImage = new VideoFrame(RGBABuffer, {
+          format: "RGBA",
+          codedWidth: imageMessage.width,
+          codedHeight: imageMessage.height,
+          timestamp: imageMessage.stamp.sec,
+        });
+      } else {
+        frameImage = new VideoFrame(imageMessage.data, {
+          format: codecMap.get(imageMessage.encoding)!,
+          codedWidth: imageMessage.width,
+          codedHeight: imageMessage.height,
+          timestamp: imageMessage.stamp.sec,
+        });
+      }
     } else {
       const imageDecoder = new ImageDecoder({
         type: `image/${imageMessage.format}`,
