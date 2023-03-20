@@ -5,6 +5,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import os from "os";
 import { join as pathJoin } from "path";
+import * as zmq from "zeromq";
 
 import { PreloaderSockets } from "@foxglove/electron-socket/preloader";
 import Logger from "@foxglove/log";
@@ -202,6 +203,30 @@ export function main(): void {
   contextBridge.exposeInMainWorld("menuBridge", menuBridge);
   contextBridge.exposeInMainWorld("storageBridge", storageBridge);
   contextBridge.exposeInMainWorld("desktopBridge", desktopBridge);
+  async function createZmqPullSocket(
+    host: string = "127.0.0.1",
+    port: number = 5555,
+    onData: (data: Buffer) => void,
+    onError: (error: unknown) => void,
+    onOpen: () => void,
+    onClose: () => void,
+  ) {
+    const socket = new zmq.Pull({ receiveHighWaterMark: 0 });
+    log.info("Creating ZMQ socket", { host, port });
+    await socket.bind(`tcp://${host}:${port}`);
+    socket.events.on("bind:error", ({ error }) => onError(error));
+    socket.events.on("accept:error", ({ error }) => onError(error));
+    socket.events.on("bind", () => onOpen());
+    socket.events.on("close", () => onClose());
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, no-constant-condition
+    while (true) {
+      const [msg] = await socket.receive();
+      onData(msg!);
+    }
+  }
+
+  contextBridge.exposeInMainWorld("createZmqSocket", createZmqPullSocket);
 
   log.debug(`End Preload`);
 }

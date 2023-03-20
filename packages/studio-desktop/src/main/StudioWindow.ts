@@ -139,7 +139,7 @@ function newStudioWindow(deepLinks: string[] = []): BrowserWindow {
       contextIsolation: true,
       sandbox: false, // Allow preload script to access Node builtins
       preload: preloadPath,
-      nodeIntegration: false,
+      nodeIntegration: true,
       additionalArguments: [
         `--allowCrashReporting=${crashReportingEnabled ? "1" : "0"}`,
         `--allowTelemetry=${telemetryEnabled ? "1" : "0"}`,

@@ -8,6 +8,7 @@ import {
   App,
   AppSetting,
   FoxgloveWebSocketDataSourceFactory,
+  DepthaiDataSourceFactory,
   IAppConfiguration,
   IDataSourceFactory,
   IdbExtensionLoader,
@@ -85,6 +86,7 @@ export default function Root(props: {
 
     const ros2Enabled = (ros2NativeDsEnabled as boolean | undefined) ?? false;
     const sources = [
+      new DepthaiDataSourceFactory(),
       new FoxgloveWebSocketDataSourceFactory(),
       new RosbridgeDataSourceFactory(),
       new Ros1SocketDataSourceFactory(),

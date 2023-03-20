@@ -47,4 +47,5 @@ export { default as RemoteDataSourceFactory } from "./dataSources/RemoteDataSour
 export { default as VelodyneDataSourceFactory } from "./dataSources/VelodyneDataSourceFactory";
 export { default as McapLocalDataSourceFactory } from "./dataSources/McapLocalDataSourceFactory";
 export { default as SampleNuscenesDataSourceFactory } from "./dataSources/SampleNuscenesDataSourceFactory";
+export { default as DepthaiDataSourceFactory } from "./dataSources/DepthaiDataSourceFactory";
 export { LaunchPreferenceValue } from "@foxglove/studio-base/types/LaunchPreferenceValue";
